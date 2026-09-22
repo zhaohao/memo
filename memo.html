@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Z-Memo 详情</title>
+
+  <!-- Tailwind CSS -->
+  <script src="tailwindcss.js"></script>
+  <!-- Marked.js 用于 Markdown 渲染 -->
+  <script src="marked.min.js"></script>
+  <!-- Highlight.js 用于代码高亮 -->
+  <link rel="stylesheet" href="default.min.css">
+  <script src="highlight.min.js"></script>
+
+  <style>
+    @import '//cdn.staticfile.org/lxgw-wenkai-screen-webfont/1.6.0/lxgwwenkaiscreen.css?ver=6.2.2';
+
+    body {
+      font-family: monospace, "Century Gothic", "LXGW WenKai Screen", sans-serif;
+    }
+
+    .hljs {
+      background: #d2e4e5;
+    }
+
+    .hljs-deletion,
+    .hljs-number,
+    .hljs-quote,
+    .hljs-selector-class,
+    .hljs-selector-id,
+    .hljs-string,
+    .hljs-template-tag,
+    .hljs-type {
+      color: #008090;
+    }
+
+    .hljs-section,
+    .hljs-title {
+      color: #008090;
+    }
+
+    .markdown-body pre {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background-color: #d2e4e5;
+      overflow-x: auto;
+    }
+
+    .markdown-body blockquote {
+      border-left: 4px solid #008090;
+      padding-left: 1rem;
+      color: #4b5563;
+      margin: 0.5rem 0;
+    }
+
+    .markdown-body ul {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+    }
+
+    .markdown-body ol {
+      list-style-type: decimal;
+      padding-left: 1.25rem;
+    }
+
+    .markdown-body p {
+      margin-bottom: 0.5rem;
+      word-break: break-word;
+    }
+
+    .markdown-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.5rem;
+      display: inline-block;
+      cursor: zoom-in;
+    }
+
+    #lightbox {
+      transition: opacity 0.25s ease-in-out;
+    }
+
+    #lightbox.hidden-lightbox {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .tk-comments {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    #artalk-comments {
+      margin-top: 20px;
+    }
+
+    .tk-footer {
+      display: none;
+    }
+
+    .tk-tag-green {
+      background-color: #ff0000;
+      border: 0px solid #ff0000;
+      border-radius: 2px;
+      color: #eee;
+    }
+
+    #toggleCommentBtn {
+      margin: 10px 0;
+      padding: 0.5em 0.5em;
+      color: #5e5e5eff;
+      font-weight: bold;
+      background: #e5eeefff;
+      border-radius: 15px;
+      cursor: pointer;
+      border: 0;
+      transition: all 1s ease-in-out;
+    }
+
+    #toggleCommentBtn:hover {
+      padding: 0.5em 1em;
+      background: #BAD9DA;
+      border-radius: 15px;
+      border: 0;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen py-8">
+  <div class="max-w-5xl mx-auto px-4">
+    <!-- 顶部导航和操作栏 -->
+    <header class="flex justify-between items-center mb-6">
+      <a href="index.html"
+        class="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-cyan-600 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        返回列表
+      </a>
+
+      <button id="shareBtn"
+        class="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-blue-600 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+          </path>
+        </svg>
+        <span id="shareText">分享此条 Memo</span>
+      </button>
+    </header>
+
+    <!-- 加载状态 -->
+    <div id="loading" class="text-center py-16 bg-white rounded-xl shadow-sm border border-slate-100">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+      <p class="mt-3 text-slate-500 text-sm">正在加载 Memo 详情...</p>
+    </div>
+
+    <!-- 异常错误状态 -->
+    <div id="errorState" class="hidden text-center py-16 bg-white rounded-xl shadow-sm border border-slate-100">
+      <p class="text-red-500 font-medium" id="errorMsg">找不到指定的 Memo。</p>
+      <a href="index.html" class="inline-block mt-4 text-sm text-blue-600 hover:underline">返回首页时间线</a>
+    </div>
+
+    <!-- Memo 卡片内容容器 -->
+    <main id="memoContainer" class="hidden"></main>
+    <div style="text-align: end;">
+      <button id="toggleCommentBtn" onclick="toggleComment()" style="margin-right: 20px;font-size:13px;">显示评论区</button>
+    </div>
+
+    <div id="tcomment" style="display:none;">
+      <div id="tcomments"></div>
+    </div>
+
+  </div>
+
+  <!-- Lightbox 模态框 -->
+  <div id="lightbox" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 hidden-lightbox">
+    <button id="lightboxClose"
+      class="absolute top-4 right-4 text-white/70 hover:text-white p-2 text-3xl font-light focus:outline-none z-10"
+      title="关闭 (Esc)">
+      &times;
+    </button>
+    <div class="relative max-w-full max-h-full flex items-center justify-center">
+      <img id="lightboxImg" src="" alt="大图预览"
+        class="max-w-[90vw] max-h-[90vh] object-contain rounded select-none shadow-2xl transition-transform duration-200">
+    </div>
+  </div>
+
+  <script>
+    // ================= 全局开关与配置 =================
+    const USE_LOCAL_DATA = true;       // true: 从本地 memos.json 获取数据; false: 从远程 API 获取
+    const USE_LOCAL_RESOURCES = true;  // true: 使用本地文件路径 (./file/...); false: 拼接 API_DOMAIN
+
+    const API_DOMAIN = "https://m.zhao.im"; // 替换为你的 Memos 实际域名
+    const API_URL = `${API_DOMAIN}/api/v1/memos?pageSize=1000&view=MEMO_VIEW_FULL`;
+    // ===================================================
+
+    // 获取 URL 参数（支持 ?name=memos/123 或 ?id=123）
+    const urlParams = new URLSearchParams(window.location.search);
+    const memoName = urlParams.get('name');
+    const memoId = urlParams.get('id');
+
+    // 解析资源 URL（构建 /file/attachments/${resourceId}/${filename}）
+    function getResourceUrl(res) {
+      if (!res) return '';
+
+      // 1. 如果传入的是纯字符串
+      if (typeof res === 'string') {
+        if (/^(http|https|data:)/i.test(res)) return res;
+        const cleanPath = res.startsWith('/') ? res : `/${res}`;
+        return USE_LOCAL_RESOURCES ? `.${cleanPath}` : `${API_DOMAIN}${cleanPath}`;
+      }
+
+      // 2. 如果包含完整的 externalLink 或已有 url
+      if (res.externalLink) return res.externalLink;
+
+      // 3. 提取 resourceId 与 filename
+      let resourceId = res.resourceId || res.id;
+      if (!resourceId && res.name) {
+        // 如果 name 为 attachments/TuLhEcm4XqmjgGUk5LgAgg，提取后面的字符串
+        const parts = res.name.split('/');
+        resourceId = parts[parts.length - 1];
+      }
+
+      const filename = res.filename || res.name || '';
+
+      // 如果成功获取 resourceId 和 filename，按格式拼接
+      if (resourceId && filename) {
+        const relativePath = `/file/attachments/${resourceId}/${filename}`;
+        return USE_LOCAL_RESOURCES ? `.${relativePath}` : `${API_DOMAIN}${relativePath}`;
+      }
+
+      // 备用 fallback
+      if (res.url) {
+        if (/^(http|https|data:)/i.test(res.url)) return res.url;
+        const cleanPath = res.url.startsWith('/') ? res.url : `/${res.url}`;
+        return USE_LOCAL_RESOURCES ? `.${cleanPath}` : `${API_DOMAIN}${cleanPath}`;
+      }
+
+      return '';
+    }
+
+    // 判断媒体类型
+    function getMediaType(url, type = '') {
+      const mime = type.toLowerCase();
+      if (mime.startsWith('image/')) return 'image';
+      if (mime.startsWith('video/')) return 'video';
+      if (mime.startsWith('audio/')) return 'audio';
+
+      const cleanUrl = url.split('?')[0].toLowerCase();
+      if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(cleanUrl)) return 'image';
+      if (/\.(mp4|webm|ogg|mov)$/i.test(cleanUrl)) return 'video';
+      if (/\.(mp3|wav|ogg|aac|m4a)$/i.test(cleanUrl)) return 'audio';
+
+      return 'other';
+    }
+
+    // 配置 Marked 转换逻辑
+    const renderer = new marked.Renderer();
+    renderer.image = function (href, title, text) {
+      let rawHref = typeof href === 'object' ? href.href : href;
+      let fullUrl = getResourceUrl(rawHref);
+      const mediaType = getMediaType(fullUrl);
+
+      if (mediaType === 'video') return `<div class="my-2"><video controls class="w-full rounded-lg border border-slate-200 max-h-96" src="${fullUrl}"></video></div>`;
+      if (mediaType === 'audio') return `<div class="my-2"><audio controls class="w-full" src="${fullUrl}"></audio></div>`;
+      return `<img src="${fullUrl}" alt="${text || ''}" class="lightbox-trigger rounded-lg max-h-[500px] object-cover border border-slate-200 my-1 cursor-zoom-in" loading="lazy" />`;
+    };
+
+    marked.setOptions({
+      renderer: renderer,
+      highlight: (code, lang) => (lang && hljs.getLanguage(lang)) ? hljs.highlight(code, {language: lang}).value : hljs.highlightAuto(code).value,
+      breaks: true
+    });
+
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      return new Date(dateString).toLocaleString('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    // 渲染资源附件
+    function renderResources(memo) {
+      const resources = memo.attachments || memo.resources || memo.relations || [];
+      if (!Array.isArray(resources) || resources.length === 0) return '';
+
+      let mediaHtml = '<div class="mt-6 gap-3 grid grid-cols-1 sm:grid-cols-2">';
+      resources.forEach(res => {
+        const url = getResourceUrl(res);
+        if (!url) return;
+        const mediaType = getMediaType(url, res.type || res.mimeType || '');
+
+        if (mediaType === 'image') {
+          mediaHtml += `
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 flex items-center justify-center">
+              <img src="${url}" alt="${res.filename || '图片'}" class="lightbox-trigger w-full h-auto max-h-96 object-cover hover:scale-105 transition-transform cursor-zoom-in" loading="lazy" />
+            </div>`;
+        } else if (mediaType === 'video') {
+          mediaHtml += `<div class="col-span-full"><video controls class="w-full rounded-xl border border-slate-200 max-h-96"><source src="${url}">浏览器不支持视频。</video></div>`;
+        } else if (mediaType === 'audio') {
+          mediaHtml += `<div class="col-span-full"><audio controls class="w-full"><source src="${url}">浏览器不支持音频。</audio></div>`;
+        } else {
+          mediaHtml += `<div class="col-span-full"><a href="${url}" target="_blank" class="inline-flex items-center text-sm text-blue-600 hover:underline bg-slate-100 p-3 rounded-lg">📎 附件: ${res.filename || '下载'}</a></div>`;
+        }
+      });
+      mediaHtml += '</div>';
+      return mediaHtml;
+    }
+
+    // Lightbox 功能
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+
+    function openLightbox(src) {
+      lightboxImg.src = src;
+      lightbox.classList.remove('hidden-lightbox');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.add('hidden-lightbox');
+      document.body.style.overflow = '';
+      setTimeout(() => {lightboxImg.src = '';}, 250);
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.classList.contains('lightbox-trigger')) openLightbox(e.target.src);
+    });
+
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox || e.target === document.getElementById('lightboxClose')) closeLightbox();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !lightbox.classList.contains('hidden-lightbox')) closeLightbox();
+    });
+
+    // 复制分享链接
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        const shareText = document.getElementById('shareText');
+        shareText.innerText = '链接已复制！';
+        setTimeout(() => {shareText.innerText = '分享此条 Memo';}, 2000);
+      });
+    });
+
+    // 根据配置获取 Memo 详情数据
+    async function fetchSingleMemo() {
+      let targetIdentifier = memoName || memoId;
+
+      if (!targetIdentifier) {
+        showError('未能在 URL 参数中获取到有效的 Memo 标识 (name 或 id)。');
+        return;
+      }
+
+      const fetchTargetUrl = USE_LOCAL_DATA ? './memos.json' : API_URL;
+
+      try {
+        const response = await fetch(fetchTargetUrl);
+        if (!response.ok) throw new Error(`请求数据失败: ${response.status}`);
+
+        const data = await response.json();
+        const memos = data.memos || data;
+
+        if (!Array.isArray(memos)) {
+          showError('返回的数据格式不正确，期望是一个 Memo 列表。');
+          return;
+        }
+
+        const memo = memos.find(m => 
+          m.name === targetIdentifier || 
+          m.name === `memos/${targetIdentifier}` || 
+          String(m.id) === String(targetIdentifier)
+        );
+
+        if (!memo) {
+          showError('未能找到指定的 Memo。');
+          return;
+        }
+
+        renderMemoDetail(memo);
+      } catch (error) {
+        console.error('获取 Memo 失败:', error);
+        showError(`加载数据失败，请检查网络或配置路径。\n(${error.message})`);
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+      document.getElementById('errorMsg').innerText = message;
+    }
+
+    // 渲染单条 Memo
+    function renderMemoDetail(memo) {
+      document.getElementById('loading').classList.add('hidden');
+      const container = document.getElementById('memoContainer');
+      container.classList.remove('hidden');
+
+      const contentHtml = marked.parse(memo.content || '');
+      const resourcesHtml = renderResources(memo);
+      const displayId = memo.name || memo.id || '';
+
+      container.innerHTML = `
+        <article class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+          <div class="text-xs text-slate-400 mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+            <span class="flex items-center gap-1 font-medium text-slate-500">
+              📅 发布于 ${formatDate(memo.createTime || memo.createdTs)}
+            </span>
+            <span class="bg-slate-100 px-2.5 py-1 rounded-md text-slate-500 font-mono">
+              #${displayId}
+            </span>
+          </div>
+          
+          <div class="markdown-body text-slate-800 text-base leading-relaxed overflow-x-auto">
+            ${contentHtml}
+          </div>
+          
+          ${resourcesHtml}
+        </article>
+      `;
+
+      document.title = `Memo详情 - #${displayId}`;
+      hljs.highlightAll();
+    }
+
+    // 页面初始化
+    fetchSingleMemo();
+  </script>
+
+  <script>
+    function toggleComment() {
+      const box = document.getElementById("tcomment");
+      const btn = document.getElementById("toggleCommentBtn");
+
+      if (box.style.display === "none") {
+        box.style.display = "block";
+        btn.textContent = "隐藏评论区";
+      } else {
+        box.style.display = "none";
+        btn.textContent = "显示评论区";
+      }
+    }
+  </script>
+
+  <script src="twikoo.min.js"></script>
+  <script>
+    twikoo.init({
+      envId: 'https://twikoo.zme.life',
+      el: '#tcomments',
+      path: location.href,
+      lang: 'zh-CN',
+    })
+  </script>
+
+</body>
+
+</html>

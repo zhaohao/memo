@@ -1,0 +1,430 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Language" content="zh-cn" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="theme-color" content="#c9ded6ff">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="svg-mouse.svg" type="image/x-icon" />
+  <link rel="apple-touch-icon" href="svg-mouse.svg" />
+  <link id="favicon" rel="icon" href="svg-mouse.svg" type="image/svg+xml">
+  <title>Z-Memos</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="tailwindcss.js"></script>
+  <!-- Marked.js 用于 Markdown 渲染 -->
+  <script src="marked.min.js"></script>
+  <!-- Highlight.js 用于代码高亮 -->
+  <link rel="stylesheet" href="default.min.css">
+  <script src="highlight.min.js"></script>
+
+  <style>
+    @import '//cdn.staticfile.org/lxgw-wenkai-screen-webfont/1.6.0/lxgwwenkaiscreen.css?ver=6.2.2';
+    body { font-family:monospace,"Century Gothic","LXGW WenKai Screen",sans-serif;}
+    .hljs { background:#d2e4e5; }
+    .hljs-deletion,.hljs-number,.hljs-quote,.hljs-selector-class,.hljs-selector-id,.hljs-string,.hljs-template-tag,.hljs-type { color: #008090; }
+    .hljs-section,.hljs-title { color: #008090; }
+    .markdown-body pre { padding: 1rem; border-radius: 0.5rem; background-color: #d2e4e5; overflow-x: auto; }
+    .markdown-body blockquote { border-left: 4px solid #008090; padding-left: 1rem; color: #4b5563; margin: 0.5rem 0; }
+    .markdown-body ul { list-style-type: disc; padding-left: 1.25rem; }
+    .markdown-body ol { list-style-type: decimal; padding-left: 1.25rem; }
+    .markdown-body p { margin-bottom: 0.5rem; word-break: break-word; }
+    .markdown-body img { max-width: 100%; height: auto; border-radius: 0.5rem; display: inline-block; cursor: zoom-in; }
+    
+    /* Lightbox 渐变动画 */
+    #lightbox {
+      transition: opacity 0.25s ease-in-out;
+    }
+    #lightbox.hidden-lightbox {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+
+
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen py-8" style="
+    background: #dbe4e650;">
+  <div class="max-w-5xl mx-auto px-4">
+    <!-- 顶部控制栏 -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+      <h1 class="text-2xl font-bold text-slate-900"><a href="/" style="color:#008090" >Z-Memos</a></h1>
+      
+      <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+        <!-- 当前页信息提示 -->
+        <span id="topPageStatus" class="text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+          第 1 / 1 页
+        </span>
+
+        <!-- 页码跳转控制 -->
+        <div class="flex items-center gap-1.5">
+          <label for="jumpPageInput" class="text-sm text-slate-600">跳至：</label>
+          <input id="jumpPageInput" type="number" min="1" value="1" class="w-16 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+          <button id="jumpBtn" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm transition-colors">
+            跳转
+          </button>
+        </div>
+
+        <!-- 每页条数切换 -->
+        <div class="flex items-center gap-2">
+          <label for="pageSize" class="text-sm text-slate-600">每页显示：</label>
+          <select id="pageSize" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+            <option value="30" selected>30 条</option>
+            <option value="50">50 条</option>
+            <option value="100">100 条</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- 加载状态 -->
+    <div id="loading" class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+      <p class="mt-2 text-slate-500 text-sm">数据加载中...</p>
+    </div>
+
+    <!-- 动态列表容器 -->
+    <main id="memoList" class="space-y-6 hidden"></main>
+
+    <!-- 分页控件 -->
+    <footer id="pagination" class="flex justify-between items-center mt-8 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hidden">
+      <button id="prevBtn" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+        上一页
+      </button>
+      <span id="pageInfo" class="text-sm font-medium text-slate-600">页码 1 / 1</span>
+      <button id="nextBtn" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+        下一页
+      </button>
+    </footer>
+  </div>
+
+  <!-- 回到顶部悬浮按钮 -->
+  <button id="backToTopBtn" class="fixed bottom-6 right-6 z-40 bg-cyan-600 hover:bg-cyan-700 text-white p-3 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2 focus:outline-none" title="返回顶部">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+    </svg>
+  </button>
+
+  <!-- Lightbox 模态框 -->
+  <div id="lightbox" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 hidden-lightbox">
+    <button id="lightboxClose" class="absolute top-4 right-4 text-white/70 hover:text-white p-2 text-3xl font-light focus:outline-none z-10" title="关闭 (Esc)">
+      &times;
+    </button>
+    <div class="relative max-w-full max-h-full flex items-center justify-center">
+      <img id="lightboxImg" src="" alt="大图预览" class="max-w-[90vw] max-h-[90vh] object-contain rounded select-none shadow-2xl transition-transform duration-200">
+    </div>
+  </div>
+
+  <script>
+    // const API_DOMAIN = 'https://m.zhao.im';
+    // const API_URL = `${API_DOMAIN}/api/v1/memos?pageSize=1000&view=MEMO_VIEW_FULL`;
+    const API_DOMAIN = '/';
+    const API_URL = `memos.json`;
+
+    let allMemos = [];
+    let currentPage = 1;
+    let pageSize = 30;
+
+    // 强效置顶函数
+    function scrollToTop() {
+      setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }, 0);
+    }
+
+    // 解析并构建资源文件的真实完整 URL
+    function getResourceUrl(res) {
+      if (!res) return '';
+      if (res.externalLink) return res.externalLink;
+      if (res.url && (res.url.startsWith('http://') || res.url.startsWith('https://'))) {
+        return res.url;
+      }
+
+      let resourceId = res.name || res.id || '';
+      if (resourceId.includes('/')) {
+        resourceId = resourceId.split('/').pop();
+      }
+
+      const filename = res.filename || res.fileName || '';
+
+      if (resourceId && filename) {
+        return `${API_DOMAIN}/file/attachments/${resourceId}/${filename}`;
+      }
+
+      if (res.url) {
+        return res.url.startsWith('/') ? `${API_DOMAIN}${res.url}` : `${API_DOMAIN}/${res.url}`;
+      }
+
+      return '';
+    }
+
+    // 判断媒体类型
+    function getMediaType(url, type = '') {
+      const mime = type.toLowerCase();
+      if (mime.startsWith('image/')) return 'image';
+      if (mime.startsWith('video/')) return 'video';
+      if (mime.startsWith('audio/')) return 'audio';
+
+      const cleanUrl = url.split('?')[0].toLowerCase();
+      if (/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(cleanUrl)) return 'image';
+      if (/\.(mp4|webm|ogg|mov)$/i.test(cleanUrl)) return 'video';
+      if (/\.(mp3|wav|ogg|aac|m4a)$/i.test(cleanUrl)) return 'audio';
+
+      return 'other';
+    }
+
+    // 配置 Marked 自定义渲染逻辑
+    const renderer = new marked.Renderer();
+
+    renderer.image = function(href, title, text) {
+      let fullUrl = typeof href === 'object' ? href.href : href;
+      if (fullUrl && !fullUrl.startsWith('http')) {
+        fullUrl = `${API_DOMAIN}${fullUrl.startsWith('/') ? '' : '/'}${fullUrl}`;
+      }
+      const mediaType = getMediaType(fullUrl);
+
+      if (mediaType === 'video') {
+        return `<div class="my-2"><video controls class="w-full rounded-lg border border-slate-200 max-h-96" src="${fullUrl}"></video></div>`;
+      } else if (mediaType === 'audio') {
+        return `<div class="my-2"><audio controls class="w-full" src="${fullUrl}"></audio></div>`;
+      }
+      return `<img src="${fullUrl}" alt="${text || ''}" class="lightbox-trigger rounded-lg max-h-96 object-cover border border-slate-200 my-1 cursor-zoom-in" loading="lazy" />`;
+    };
+
+    marked.setOptions({
+      renderer: renderer,
+      highlight: function(code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+          return hljs.highlight(code, { language: lang }).value;
+        }
+        return hljs.highlightAuto(code).value;
+      },
+      breaks: true
+    });
+
+    // 格式化日期
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    // 渲染多媒体附件
+    function renderResources(memo) {
+      const resources = memo.resources || memo.attachments || memo.relations || [];
+      if (!Array.isArray(resources) || resources.length === 0) return '';
+
+      let mediaHtml = '<div class="mt-4 gap-2 grid grid-cols-1 sm:grid-cols-2">';
+
+      resources.forEach(res => {
+        const url = getResourceUrl(res);
+        if (!url) return;
+
+        const mediaType = getMediaType(url, res.type || res.mimeType || '');
+
+        if (mediaType === 'image') {
+          mediaHtml += `
+            <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center">
+              <img src="${url}" alt="${res.filename || '图片'}" class="lightbox-trigger w-full h-auto max-h-80 object-cover hover:scale-105 transition-transform cursor-zoom-in" loading="lazy" />
+            </div>`;
+        } else if (mediaType === 'video') {
+          mediaHtml += `
+            <div class="col-span-full">
+              <video controls class="w-full rounded-lg border border-slate-200 max-h-96">
+                <source src="${url}">您的浏览器不支持视频播放。
+              </video>
+            </div>`;
+        } else if (mediaType === 'audio') {
+          mediaHtml += `
+            <div class="col-span-full">
+              <audio controls class="w-full">
+                <source src="${url}">您的浏览器不支持音频播放。
+              </audio>
+            </div>`;
+        } else {
+          mediaHtml += `
+            <div class="col-span-full">
+              <a href="${url}" target="_blank" class="inline-flex items-center text-sm text-blue-600 hover:underline bg-slate-100 p-2 rounded">
+                📎 附件: ${res.filename || '点击下载'}
+              </a>
+            </div>`;
+        }
+      });
+
+      mediaHtml += '</div>';
+      return mediaHtml;
+    }
+
+    // Lightbox 功能
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxClose = document.getElementById('lightboxClose');
+
+    function openLightbox(src) {
+      lightboxImg.src = src;
+      lightbox.classList.remove('hidden-lightbox');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.add('hidden-lightbox');
+      document.body.style.overflow = '';
+      setTimeout(() => { lightboxImg.src = ''; }, 250);
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.classList.contains('lightbox-trigger')) {
+        openLightbox(e.target.src);
+      }
+    });
+
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox || e.target === lightboxClose) {
+        closeLightbox();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !lightbox.classList.contains('hidden-lightbox')) {
+        closeLightbox();
+      }
+    });
+
+    // 回到顶部按钮悬浮显示控制
+    const backToTopBtn = document.getElementById('backToTopBtn');
+
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 300) {
+        backToTopBtn.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+        backToTopBtn.classList.add('opacity-100', 'translate-y-0');
+      } else {
+        backToTopBtn.classList.remove('opacity-100', 'translate-y-0');
+        backToTopBtn.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      scrollToTop();
+    });
+
+    // 获取 API 数据
+    async function fetchData() {
+      try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+
+        allMemos = data.memos || (Array.isArray(data) ? data : []);
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('memoList').classList.remove('hidden');
+        document.getElementById('pagination').classList.remove('hidden');
+
+        renderCurrentPage();
+      } catch (error) {
+        console.error('获取数据失败:', error);
+        document.getElementById('loading').innerHTML = `<p class="text-red-500">数据加载失败，请检查网络或 API 连通性。</p>`;
+      }
+    }
+
+    // 执行指定页码跳转
+    function goToPage(targetPage) {
+      const totalPages = Math.ceil(allMemos.length / pageSize) || 1;
+      let pageNum = parseInt(targetPage, 10);
+
+      if (isNaN(pageNum) || pageNum < 1) pageNum = 1;
+      if (pageNum > totalPages) pageNum = totalPages;
+
+      currentPage = pageNum;
+      renderCurrentPage();
+    }
+
+    // 渲染当前页内容与同步 UI
+    function renderCurrentPage() {
+      const totalPages = Math.ceil(allMemos.length / pageSize) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const currentMemos = allMemos.slice(startIndex, startIndex + pageSize);
+
+      const listContainer = document.getElementById('memoList');
+      listContainer.innerHTML = '';
+
+      currentMemos.forEach(memo => {
+        const card = document.createElement('article');
+        card.className = "bg-white p-6 rounded-xl shadow-sm border border-slate-100 transition-all hover:shadow-md";
+
+        const contentHtml = marked.parse(memo.content || '');
+        const resourcesHtml = renderResources(memo);
+
+        card.innerHTML = `
+          <div class="text-xs text-slate-400 mb-3 flex items-center justify-between">
+            <span>${formatDate(memo.createTime || memo.createdTs)}</span><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-500"><a href="memo.html?name=${encodeURIComponent(memo.name || memo.id)}" target="_blank" style="color:#008090">#${memo.name || memo.id}</a></span>
+          </div>
+          <div class="markdown-body text-slate-700 text-sm leading-relaxed overflow-x-auto">
+            ${contentHtml}
+          </div>
+          ${resourcesHtml}
+        `;
+        listContainer.appendChild(card);
+      });
+
+      // 同步顶部与底部页码显示
+      document.getElementById('topPageStatus').innerText = `第 ${currentPage} / ${totalPages} 页`;
+      document.getElementById('jumpPageInput').value = currentPage;
+      document.getElementById('jumpPageInput').max = totalPages;
+      document.getElementById('pageInfo').innerText = `页码 ${currentPage} / ${totalPages} (共 ${allMemos.length} 条)`;
+
+      // 更新按钮启用状态
+      document.getElementById('prevBtn').disabled = currentPage === 1;
+      document.getElementById('nextBtn').disabled = currentPage === totalPages;
+
+      hljs.highlightAll();
+
+      // 切换页面后自动触发置顶
+      scrollToTop();
+    }
+
+    // 控制栏及跳转事件绑定
+    document.getElementById('pageSize').addEventListener('change', (e) => {
+      pageSize = parseInt(e.target.value, 10);
+      currentPage = 1;
+      renderCurrentPage();
+    });
+
+    document.getElementById('jumpBtn').addEventListener('click', () => {
+      const pageVal = document.getElementById('jumpPageInput').value;
+      goToPage(pageVal);
+    });
+
+    document.getElementById('jumpPageInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        goToPage(e.target.value);
+      }
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (currentPage > 1) {
+        goToPage(currentPage - 1);
+      }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      const totalPages = Math.ceil(allMemos.length / pageSize);
+      if (currentPage < totalPages) {
+        goToPage(currentPage + 1);
+      }
+    });
+
+    // 初始化获取数据
+    fetchData();
+  </script>
+</body>
+</html>

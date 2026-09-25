@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -11,7 +12,7 @@
   <link rel="shortcut icon" href="svg-mouse.svg" type="image/x-icon" />
   <link rel="apple-touch-icon" href="svg-mouse.svg" />
   <link id="favicon" rel="icon" href="svg-mouse.svg" type="image/svg+xml">
-  <title>Z-Memos</title>
+  <title>/Memos</title>
   
   <!-- Tailwind CSS -->
   <script src="tailwindcss.js"></script>
@@ -33,6 +34,14 @@
     .markdown-body ol { list-style-type: decimal; padding-left: 1.25rem; }
     .markdown-body p { margin-bottom: 0.5rem; word-break: break-word; }
     .markdown-body img { max-width: 100%; height: auto; border-radius: 0.5rem; display: inline-block; cursor: zoom-in; }
+   a {
+      padding: 0.5em 0.5em;
+      transition: all 1s ease-in-out;
+    }
+
+    a:hover {
+      padding: 0.5em 1em;
+    }
     
     /* Lightbox 渐变动画 */
     #lightbox {
@@ -51,7 +60,7 @@
   <div class="max-w-5xl mx-auto px-4">
     <!-- 顶部控制栏 -->
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-      <h1 class="text-2xl font-bold text-slate-900"><a href="/" style="color:#008090" >Z-Memos</a></h1>
+      <h1 class="text-2xl font-bold text-slate-900"><a href="/" style="color:#008090" >/Memos</a></h1>
       
       <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
         <!-- 当前页信息提示 -->
@@ -62,7 +71,7 @@
         <!-- 页码跳转控制 -->
         <div class="flex items-center gap-1.5">
           <label for="jumpPageInput" class="text-sm text-slate-600">跳至：</label>
-          <input id="jumpPageInput" type="number" min="1" value="1" class="w-16 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+          <input id="jumpPageInput" type="number" min="1" value="1" class="w-16 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-center bg-white focus:ring-2 focus:ring-cyan-500 outline-none">
           <button id="jumpBtn" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm transition-colors">
             跳转
           </button>
@@ -71,9 +80,9 @@
         <!-- 每页条数切换 -->
         <div class="flex items-center gap-2">
           <label for="pageSize" class="text-sm text-slate-600">每页显示：</label>
-          <select id="pageSize" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-            <option value="30" selected>30 条</option>
-            <option value="50">50 条</option>
+          <select id="pageSize" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-cyan-500 outline-none">
+            <option value="30">30 条</option>
+            <option value="50" selected>50 条</option>
             <option value="100">100 条</option>
           </select>
         </div>
@@ -82,7 +91,7 @@
 
     <!-- 加载状态 -->
     <div id="loading" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-cyan-500 border-t-transparent"></div>
       <p class="mt-2 text-slate-500 text-sm">数据加载中...</p>
     </div>
 
@@ -119,14 +128,15 @@
   </div>
 
   <script>
-    // const API_DOMAIN = 'https://m.zhao.im';
-    // const API_URL = `${API_DOMAIN}/api/v1/memos?pageSize=1000&view=MEMO_VIEW_FULL`;
-    const API_DOMAIN = '/';
-    const API_URL = `memos.json`;
+    const API_DOMAIN = 'https://zme.life';
+    const API_URL = `${API_DOMAIN}/api/v1/memos?pageSize=1000&view=MEMO_VIEW_FULL`;
+
+    // const API_DOMAIN = '';
+    // const API_URL = `memos.json`;
 
     let allMemos = [];
     let currentPage = 1;
-    let pageSize = 30;
+    let pageSize = 50;
 
     // 强效置顶函数
     function scrollToTop() {
@@ -208,13 +218,32 @@
     });
 
     // 格式化日期
+    //function formatDate(dateString) {
+    //  if (!dateString) return '';
+    //  const date = new Date(dateString);
+    //  return date.toLocaleString('zh-CN', {
+    //    year: 'numeric', month: '2-digit', day: '2-digit',
+    //    hour: '2-digit', minute: '2-digit'
+    //  });
+    //}
     function formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleString('zh-CN', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit'
-      });
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return ''; // 预防无效日期输入
+
+        // 获取英文星期全称 (例如 Sunday)
+        const weekday = date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase();
+
+        // 补零处理函数
+        const pad = (num) => String(num).padStart(2, '0');
+
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+
+          return `${year}.${month}.${day} ${hours}:${minutes} ${weekday}`;
     }
 
     // 渲染多媒体附件
@@ -252,7 +281,7 @@
         } else {
           mediaHtml += `
             <div class="col-span-full">
-              <a href="${url}" target="_blank" class="inline-flex items-center text-sm text-blue-600 hover:underline bg-slate-100 p-2 rounded">
+              <a href="${url}" target="_blank" class="inline-flex items-center text-sm text-cyan-600 hover:underline bg-slate-100 p-2 rounded">
                 📎 附件: ${res.filename || '点击下载'}
               </a>
             </div>`;
@@ -365,8 +394,8 @@
         const resourcesHtml = renderResources(memo);
 
         card.innerHTML = `
-          <div class="text-xs text-slate-400 mb-3 flex items-center justify-between">
-            <span>${formatDate(memo.createTime || memo.createdTs)}</span><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-500"><a href="memo.html?name=${encodeURIComponent(memo.name || memo.id)}" target="_blank" style="color:#008090">#${memo.name || memo.id}</a></span>
+          <div class="text-xs text-slate-400 mb-3 flex items-center justify-between" style="padding-left:30px; background:url('data:image/gif;base64,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') no-repeat center left; background-size:23px 17px;">
+            <span><a href="memo.html?name=${encodeURIComponent(memo.name || memo.id)}" target="_blank" style="color:#008090">${formatDate(memo.createTime || memo.createdTs)}</a></span><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-500"><a href="memo.html?name=${encodeURIComponent(memo.name || memo.id)}" target="_blank" style="color:#008090">➜</a></span>
           </div>
           <div class="markdown-body text-slate-700 text-sm leading-relaxed overflow-x-auto">
             ${contentHtml}
